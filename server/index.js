@@ -14,7 +14,7 @@ const io = require("socket.io")(httpServer, {
     }
 })
 
-const playerList = []
+let playerList = []
 
 io.on('connection', (socket) => {
     console.log('a user connected')
@@ -22,13 +22,13 @@ io.on('connection', (socket) => {
     socket.on('login', data => {
         console.log('user login', socket.id)
         playerList.push({ id: socket.id, x: data.x, y: data.y })
-        io.emit('playerConnected', playerList)
+        io.emit(`playerconnected`, playerList)
     })
 
-    socket.on('move', data => {
-        index = playerList.findIndex(p => p === socket.id)
+    socket.on('move', async data => {
+        index = await playerList.findIndex(p => p.id === socket.id)
+        console.log(index, playerList[index].x, playerList[index].y, data.x, data.y)
         data = { ...data, id: socket.id }
-        console.log(data)
         playerList[index] = data
         io.emit('playermove', data)
     })
@@ -36,7 +36,7 @@ io.on('connection', (socket) => {
     socket.on("disconnect", () => {
         console.log('logout', socket.id)
         io.emit('logout', socket.id)
-        index = playerList.findIndex(p => p === socket.id)
+        index = playerList.findIndex(p => p.id === socket.id)
         playerList.splice(index, 1)
     })
 })

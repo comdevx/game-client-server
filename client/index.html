@@ -10,7 +10,6 @@
         }
     </style>
 
-
     <script src="https://cdn.socket.io/4.1.1/socket.io.min.js"
         integrity="sha384-cdrFIqe3RasCMNE0jeFG9xJHog/tgOVC1E9Lzve8LQN1g5WUHo0Kvk1mawWjxX7a"
         crossorigin="anonymous"></script>
@@ -20,18 +19,18 @@
 <body onload="startGame()">
     <script>
 
-        var myGamePiece;
+        var myGamePiece
         var players = []
         var width = 480
         var height = 270
         var size = 30
-        var speed = 1
-        var gameUpdate = 10
-        var socketUrl = 'http://127.0.0.1:3000'
+        var speed = 3
+        var fps = 60
+        var socketUrl = '127.0.0.1:3000'
 
         const socket = io(socketUrl)
 
-        socket.on('playerConnected', data => {
+        socket.on(`playerconnected`, data => {
             data.forEach(p => {
                 if (p.id !== socket.id && !players.some(p2 => p2.name === p.id)) {
                     players.push(new component(30, 30, "assets/smiley.gif", p.x, p.y, "image", p.id))
@@ -55,87 +54,91 @@
 
         function startGame() {
             const rand = Math.floor(Math.random() * 100) + 10
-            myGamePiece = new component(30, 30, "assets/smiley.gif", rand, 120, "image", 'user');
-            myGameArea.start();
+            myGamePiece = new component(30, 30, "assets/smiley.gif", rand, 120, "image", 'user')
+            myGameArea.start()
             socket.emit('login', { x: rand, y: 120 })
         }
 
         var myGameArea = {
             canvas: document.createElement("canvas"),
             start: function () {
-                this.canvas.width = width;
-                this.canvas.height = height;
-                this.context = this.canvas.getContext("2d");
-                document.body.insertBefore(this.canvas, document.body.childNodes[0]);
-                // this.frameNo = 0;
-                this.interval = setInterval(updateGameArea, gameUpdate);
+                this.canvas.width = width
+                this.canvas.height = height
+                this.context = this.canvas.getContext("2d")
+                document.body.insertBefore(this.canvas, document.body.childNodes[0])
+                // this.frameNo = 0
+                this.interval = setInterval(updateGameArea, 1000 / fps)
                 window.addEventListener('keydown', function (e) {
-                    myGameArea.keys = (myGameArea.keys || []);
-                    myGameArea.keys[e.keyCode] = (e.type == "keydown");
+                    myGameArea.keys = (myGameArea.keys || [])
+                    myGameArea.keys[e.keyCode] = (e.type == "keydown")
                 })
                 window.addEventListener('keyup', function (e) {
-                    myGameArea.keys[e.keyCode] = (e.type == "keydown");
+                    myGameArea.keys[e.keyCode] = (e.type == "keydown")
                 })
             },
             clear: function () {
-                this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                this.context.clearRect(0, 0, this.canvas.width, this.canvas.height)
             },
             stop: function () {
-                clearInterval(this.interval);
+                clearInterval(this.interval)
             }
         }
 
         function component(width, height, color, x, y, type, name) {
             this.name = name
-            this.type = type;
+            this.type = type
             if (type == "image") {
-                this.image = new Image();
-                this.image.src = color;
+                this.image = new Image()
+                this.image.src = color
             }
-            this.width = width;
-            this.height = height;
-            this.speedX = 0;
-            this.speedY = 0;
-            this.x = x;
-            this.y = y;
+            this.width = width
+            this.height = height
+            this.speedX = 0
+            this.speedY = 0
+            this.x = x
+            this.y = y
             this.update = function () {
-                ctx = myGameArea.context;
+                ctx = myGameArea.context
                 if (type == "image") {
                     ctx.drawImage(this.image,
                         this.x,
                         this.y,
-                        this.width, this.height);
+                        this.width, this.height)
                 } else {
-                    ctx.fillStyle = color;
-                    ctx.fillRect(this.x, this.y, this.width, this.height);
+                    ctx.fillStyle = color
+                    ctx.fillRect(this.x, this.y, this.width, this.height)
                 }
             }
             this.newPos = function () {
-                this.x += this.speedX;
-                this.y += this.speedY;
+                this.x += this.speedX
+                this.y += this.speedY
             }
         }
 
         function updateGameArea() {
-            myGameArea.clear();
+            myGameArea.clear()
 
-            myGamePiece.image.src = "assets/smiley.gif";
+            myGamePiece.image.src = "assets/smiley.gif"
 
-            myGamePiece.speedX = 0;
-            myGamePiece.speedY = 0;
+            myGamePiece.speedX = 0
+            myGamePiece.speedY = 0
 
-            if (myGamePiece.x > 0 && myGameArea.keys && myGameArea.keys[37]) {
-                myGamePiece.image.src = "assets/angry.gif";
-                myGamePiece.speedX = -speed
-            }
-            if (myGamePiece.x < width - size && myGameArea.keys && myGameArea.keys[39]) { myGamePiece.speedX = speed }
-            if (myGamePiece.y > 0 && myGameArea.keys && myGameArea.keys[38]) { myGamePiece.speedY = -speed }
-            if (myGamePiece.y < height - size && myGameArea.keys && myGameArea.keys[40]) { myGamePiece.speedY = speed }
+            // const block = players.some(p => myGamePiece.x > p.x + 15 && myGamePiece.y < p.y + 15)
 
-            if (myGamePiece.speedX || myGamePiece.speedY) socket.emit('move', { x: myGamePiece.x, y: myGamePiece.y })
+            // if (!block) {
+                if (myGamePiece.x > 0 && myGameArea.keys && myGameArea.keys[37]) {
+                    myGamePiece.image.src = "assets/angry.gif"
+                    myGamePiece.speedX = -speed
+                }
+                if (myGamePiece.x < width - size && myGameArea.keys && myGameArea.keys[39]) { myGamePiece.speedX = speed }
+                if (myGamePiece.y > 0 && myGameArea.keys && myGameArea.keys[38]) { myGamePiece.speedY = -speed }
+                if (myGamePiece.y < height - size && myGameArea.keys && myGameArea.keys[40]) { myGamePiece.speedY = speed }
 
-            myGamePiece.newPos();
-            myGamePiece.update();
+                if (myGamePiece.speedX || myGamePiece.speedY) socket.emit('move', { x: myGamePiece.x, y: myGamePiece.y })
+            // }
+
+            myGamePiece.newPos()
+            myGamePiece.update()
 
             players.forEach(p => {
                 // if (p.name === data.id) {
@@ -146,18 +149,18 @@
         }
 
         function move(dir) {
-            myGamePiece.image.src = "assets/angry.gif";
+            myGamePiece.image.src = "assets/angry.gif"
 
-            if (dir == "up") { myGamePiece.speedY = -1; }
-            if (dir == "down") { myGamePiece.speedY = 1; }
-            if (dir == "left") { myGamePiece.speedX = -1; }
-            if (dir == "right") { myGamePiece.speedX = 1; }
+            if (dir == "up") { myGamePiece.speedY = -1 }
+            if (dir == "down") { myGamePiece.speedY = 1 }
+            if (dir == "left") { myGamePiece.speedX = -1 }
+            if (dir == "right") { myGamePiece.speedX = 1 }
         }
 
         function clearmove() {
-            myGamePiece.image.src = "assets/smiley.gif";
-            myGamePiece.speedX = 0;
-            myGamePiece.speedY = 0;
+            myGamePiece.image.src = "assets/smiley.gif"
+            myGamePiece.speedX = 0
+            myGamePiece.speedY = 0
         }
     </script>
     <!-- <div style="text-align:center;width:480px;">
