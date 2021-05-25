@@ -21,7 +21,8 @@ io.on('connection', (socket) => {
 
     socket.on('login', data => {
         console.log('user login', socket.id)
-        playerList.push({ id: socket.id, x: data.x, y: data.y })
+        data = { ...data, id: socket.id }
+        playerList.push(data)
         io.emit(`playerconnected`, playerList)
     })
 

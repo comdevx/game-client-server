@@ -19,6 +19,7 @@
 <body onload="startGame()">
     <script>
 
+        var name = prompt('Player name.')
         var myGamePiece
         var players = []
         var width = 480
@@ -32,14 +33,14 @@
 
         socket.on(`playerconnected`, data => {
             data.forEach(p => {
-                if (p.id !== socket.id && !players.some(p2 => p2.name === p.id)) {
-                    players.push(new component(30, 30, "assets/smiley.gif", p.x, p.y, "image", p.id))
+                if (p.id !== socket.id && !players.some(p2 => p2.id === p.id)) {
+                    players.push(new component(30, 30, "assets/smiley.gif", p.x, p.y, "image", p.id, p.name))
                 }
             })
         })
 
         socket.on('playermove', data => {
-            const player = players.find(p => p.name === data.id)
+            const player = players.find(p => p.id === data.id)
             if (player) {
                 player.x = data.x
                 player.y = data.y
@@ -47,16 +48,16 @@
         })
 
         socket.on('logout', id => {
-            const index = players.findIndex(p => p.name === id)
+            const index = players.findIndex(p => p.id === id)
             players.splice(index, 1)
             // delete players[index]
         })
 
         function startGame() {
             const rand = Math.floor(Math.random() * 100) + 10
-            myGamePiece = new component(30, 30, "assets/smiley.gif", rand, 120, "image", 'user')
+            myGamePiece = new component(30, 30, "assets/smiley.gif", rand, 120, "image", 'user', name)
             myGameArea.start()
-            socket.emit('login', { x: rand, y: 120 })
+            socket.emit('login', { x: rand, y: 120, name })
         }
 
         var myGameArea = {
@@ -84,8 +85,8 @@
             }
         }
 
-        function component(width, height, color, x, y, type, name) {
-            this.name = name
+        function component(width, height, color, x, y, type, id, name) {
+            this.id = id
             this.type = type
             if (type == "image") {
                 this.image = new Image()
@@ -108,6 +109,7 @@
                     ctx.fillStyle = color
                     ctx.fillRect(this.x, this.y, this.width, this.height)
                 }
+                drawText(name, this.x, this.y)
             }
             this.newPos = function () {
                 this.x += this.speedX
@@ -126,15 +128,15 @@
             // const block = players.some(p => myGamePiece.x > p.x + 15 && myGamePiece.y < p.y + 15)
 
             // if (!block) {
-                if (myGamePiece.x > 0 && myGameArea.keys && myGameArea.keys[37]) {
-                    myGamePiece.image.src = "assets/angry.gif"
-                    myGamePiece.speedX = -speed
-                }
-                if (myGamePiece.x < width - size && myGameArea.keys && myGameArea.keys[39]) { myGamePiece.speedX = speed }
-                if (myGamePiece.y > 0 && myGameArea.keys && myGameArea.keys[38]) { myGamePiece.speedY = -speed }
-                if (myGamePiece.y < height - size && myGameArea.keys && myGameArea.keys[40]) { myGamePiece.speedY = speed }
+            if (myGamePiece.x > 0 && myGameArea.keys && myGameArea.keys[37]) {
+                myGamePiece.image.src = "assets/angry.gif"
+                myGamePiece.speedX = -speed
+            }
+            if (myGamePiece.x < width - size && myGameArea.keys && myGameArea.keys[39]) { myGamePiece.speedX = speed }
+            if (myGamePiece.y > 0 && myGameArea.keys && myGameArea.keys[38]) { myGamePiece.speedY = -speed }
+            if (myGamePiece.y < height - size && myGameArea.keys && myGameArea.keys[40]) { myGamePiece.speedY = speed }
 
-                if (myGamePiece.speedX || myGamePiece.speedY) socket.emit('move', { x: myGamePiece.x, y: myGamePiece.y })
+            if (myGamePiece.speedX || myGamePiece.speedY) socket.emit('move', { x: myGamePiece.x, y: myGamePiece.y })
             // }
 
             myGamePiece.newPos()
@@ -146,6 +148,14 @@
                 p.update()
                 // }
             })
+
+            // drawText(name, myGamePiece.x, myGamePiece.y)
+        }
+
+        function drawText(txt, posX, posY) {
+            myGameArea.context.fillStyle = "black";
+            myGameArea.context.font = "20px Comic Sans MS";
+            myGameArea.context.fillText(txt, posX, posY);
         }
 
         function move(dir) {
