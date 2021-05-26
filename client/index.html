@@ -51,6 +51,7 @@
         socket.on(`playerconnected`, data => {
             data.forEach(p => {
                 if (p.id !== socket.id && !players.some(p2 => p2.id === p.id)) {
+                    console.log(p.name)
                     players.push(new component(30, 30, "assets/smiley.gif", p.x, p.y, "image", p.id, p.name))
                 }
             })

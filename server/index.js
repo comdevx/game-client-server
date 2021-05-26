@@ -22,21 +22,24 @@ io.on('connection', (socket) => {
     socket.on('login', data => {
         console.log('user login', socket.id)
         data = { ...data, id: socket.id }
+        console.log(data)
         playerList.push(data)
+        console.log(playerList)
         io.emit(`playerconnected`, playerList)
     })
 
     socket.on('move', async data => {
         index = await playerList.findIndex(p => p.id === socket.id)
         console.log(index, playerList[index].x, playerList[index].y, data.x, data.y)
-        data = { ...data, id: socket.id }
-        playerList[index] = data
-        io.emit('playermove', data)
+        // data = { ...data, id: socket.id }
+        // playerList[index] = data
+        Object.assign(playerList[index], data)
+        io.emit('playermove', playerList[index])
     })
 
     socket.on('chat', async data => {
         console.log(data)
-        if (data.type==='world'){
+        if (data.type === 'world') {
             io.emit('chat-world', data)
         }
     })
@@ -45,7 +48,9 @@ io.on('connection', (socket) => {
         console.log('logout', socket.id)
         io.emit('logout', socket.id)
         index = playerList.findIndex(p => p.id === socket.id)
+        console.log(playerList)
         playerList.splice(index, 1)
+        console.log(playerList)
     })
 })
 
