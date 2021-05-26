@@ -34,6 +34,13 @@ io.on('connection', (socket) => {
         io.emit('playermove', data)
     })
 
+    socket.on('chat', async data => {
+        console.log(data)
+        if (data.type==='world'){
+            io.emit('chat-world', data)
+        }
+    })
+
     socket.on("disconnect", () => {
         console.log('logout', socket.id)
         io.emit('logout', socket.id)

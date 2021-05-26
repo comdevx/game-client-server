@@ -4,9 +4,25 @@
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <style>
-        canvas {
+        #canvas {
+            margin: -8px -8px;
             border: 1px solid #d3d3d3;
             background-color: #f1f1f1;
+        }
+
+        #chat {
+            position: absolute;
+            left: 10px;
+            top: 335px;
+            width: 600px;
+            height: 100px;
+        }
+
+        #input {
+            position: absolute;
+            left: 10px;
+            top: 450px;
+            width: 600px;
         }
     </style>
 
@@ -22,8 +38,9 @@
         var name = prompt('Player name.')
         var myGamePiece
         var players = []
-        var width = 480
-        var height = 270
+        var chat = []
+        var width = 800
+        var height = 480
         var size = 30
         var speed = 3
         var fps = 60
@@ -47,6 +64,15 @@
             }
         })
 
+        socket.on('chat-world', data => {
+            if (chat.length > 99) {
+                chat.splice(0, 1)
+            }
+            chat.push(` ${data.name}: ${data.message}\n`)
+            myGameArea.chat.value = chat.join("")
+            myGameArea.chat.scrollTop = myGameArea.chat.scrollHeight
+        })
+
         socket.on('logout', id => {
             const index = players.findIndex(p => p.id === id)
             players.splice(index, 1)
@@ -62,16 +88,49 @@
 
         var myGameArea = {
             canvas: document.createElement("canvas"),
+            input: document.createElement('input'),
+            chat: document.createElement('textarea'),
+
             start: function () {
+                this.canvas.id = 'canvas'
                 this.canvas.width = width
                 this.canvas.height = height
                 this.context = this.canvas.getContext("2d")
+
+                this.input.id = 'input'
+                this.input.autofocus = true
+                this.input.hidden = true
+
+                this.chat.id = 'chat'
+                this.chat.disabled = true
+                this.chat.focus = true
+                this.chat.style = 'resize:none'
+                // this.chat.cols = 73
+                // this.chat.rows = 7
+
                 document.body.insertBefore(this.canvas, document.body.childNodes[0])
-                // this.frameNo = 0
+                document.body.insertBefore(this.chat, document.body.childNodes[1])
+                document.body.insertBefore(this.input, document.body.childNodes[2])
+
                 this.interval = setInterval(updateGameArea, 1000 / fps)
+
                 window.addEventListener('keydown', function (e) {
                     myGameArea.keys = (myGameArea.keys || [])
                     myGameArea.keys[e.keyCode] = (e.type == "keydown")
+
+                    // enter
+                    if (myGameArea.keys && myGameArea.keys[13]) {
+                        if (myGameArea.input.hidden && !myGameArea.input.value) {
+                            myGameArea.input.hidden = false
+                            this.input.select()
+                        } else if (!myGameArea.input.hidden && myGameArea.input.value) {
+                            myGameArea.input.hidden = false
+                            socket.emit('chat', { type: 'world', name: myGamePiece.name, message: myGameArea.input.value })
+                            myGameArea.input.value = ''
+                        } else {
+                            myGameArea.input.hidden = true
+                        }
+                    }
                 })
                 window.addEventListener('keyup', function (e) {
                     myGameArea.keys[e.keyCode] = (e.type == "keydown")
@@ -83,10 +142,12 @@
             stop: function () {
                 clearInterval(this.interval)
             }
+
         }
 
         function component(width, height, color, x, y, type, id, name) {
             this.id = id
+            this.name = name
             this.type = type
             if (type == "image") {
                 this.image = new Image()
@@ -133,7 +194,7 @@
                 myGamePiece.speedX = -speed
             }
             if (myGamePiece.x < width - size && myGameArea.keys && myGameArea.keys[39]) { myGamePiece.speedX = speed }
-            if (myGamePiece.y > 0 && myGameArea.keys && myGameArea.keys[38]) { myGamePiece.speedY = -speed }
+            if (myGamePiece.y > 20 && myGameArea.keys && myGameArea.keys[38]) { myGamePiece.speedY = -speed }
             if (myGamePiece.y < height - size && myGameArea.keys && myGameArea.keys[40]) { myGamePiece.speedY = speed }
 
             if (myGamePiece.speedX || myGamePiece.speedY) socket.emit('move', { x: myGamePiece.x, y: myGamePiece.y })
@@ -143,42 +204,25 @@
             myGamePiece.update()
 
             players.forEach(p => {
-                // if (p.name === data.id) {
                 p.newPos()
                 p.update()
-                // }
             })
 
-            // drawText(name, myGamePiece.x, myGamePiece.y)
         }
 
         function drawText(txt, posX, posY) {
-            myGameArea.context.fillStyle = "black";
-            myGameArea.context.font = "20px Comic Sans MS";
+            myGameArea.context.fillStyle = "black"
+            myGameArea.context.font = "20px Comic Sans MS"
+            myGameArea.context.textAlign = 'center'
             myGameArea.context.fillText(txt, posX, posY);
         }
 
-        function move(dir) {
-            myGamePiece.image.src = "assets/angry.gif"
-
-            if (dir == "up") { myGamePiece.speedY = -1 }
-            if (dir == "down") { myGamePiece.speedY = 1 }
-            if (dir == "left") { myGamePiece.speedX = -1 }
-            if (dir == "right") { myGamePiece.speedX = 1 }
-        }
-
         function clearmove() {
-            myGamePiece.image.src = "assets/smiley.gif"
+            // myGamePiece.image.src = "assets/smiley.gif"
             myGamePiece.speedX = 0
             myGamePiece.speedY = 0
         }
     </script>
-    <!-- <div style="text-align:center;width:480px;">
-        <button onmousedown="move('up')" onmouseup="clearmove()" ontouchstart="move('up')">UP</button><br><br>
-        <button onmousedown="move('left')" onmouseup="clearmove()" ontouchstart="move('left')">LEFT</button>
-        <button onmousedown="move('right')" onmouseup="clearmove()" ontouchstart="move('right')">RIGHT</button><br><br>
-        <button onmousedown="move('down')" onmouseup="clearmove()" ontouchstart="move('down')">DOWN</button>
-    </div> -->
 
 </body>
 
