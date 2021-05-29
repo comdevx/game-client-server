@@ -2,6 +2,7 @@ const express = require('express')
 const app = express()
 const cors = require('cors')
 const http = require('http')
+const path = require('path')
 
 app.use(cors({ origin: '*' }))
 
@@ -13,6 +14,10 @@ const io = require("socket.io")(httpServer, {
         methods: ["GET", "POST"]
     }
 })
+
+// app.get('/', (req, res) => {
+//     res.sendFile(path.join(__dirname, '/../client/index.html'))
+// })
 
 let playerList = []
 
@@ -28,8 +33,8 @@ io.on('connection', (socket) => {
         io.emit(`playerconnected`, playerList)
     })
 
-    socket.on('move', async data => {
-        index = await playerList.findIndex(p => p.id === socket.id)
+    socket.on('move', data => {
+        index = playerList.findIndex(p => p.id === socket.id)
         console.log(index, playerList[index].x, playerList[index].y, data.x, data.y)
         // data = { ...data, id: socket.id }
         // playerList[index] = data
@@ -37,7 +42,7 @@ io.on('connection', (socket) => {
         io.emit('playermove', playerList[index])
     })
 
-    socket.on('chat', async data => {
+    socket.on('chat', data => {
         console.log(data)
         if (data.type === 'world') {
             io.emit('chat-world', data)

@@ -4,225 +4,538 @@
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <style>
+        #div {
+            text-align: center;
+        }
+
         #canvas {
-            margin: -8px -8px;
+            margin: auto;
             border: 1px solid #d3d3d3;
             background-color: #f1f1f1;
         }
 
         #chat {
             position: absolute;
-            left: 10px;
+            left: 250px;
             top: 335px;
-            width: 600px;
+            width: 300px;
             height: 100px;
         }
 
         #input {
             position: absolute;
-            left: 10px;
+            left: 250px;
             top: 450px;
-            width: 600px;
+            width: 300px;
         }
+
+        /* #userImg {
+            position: absolute;
+        } */
     </style>
 
-    <script src="https://cdn.socket.io/4.1.1/socket.io.min.js"
-        integrity="sha384-cdrFIqe3RasCMNE0jeFG9xJHog/tgOVC1E9Lzve8LQN1g5WUHo0Kvk1mawWjxX7a"
-        crossorigin="anonymous"></script>
+    <script src="https://cdn.socket.io/4.1.1/socket.io.min.js"></script>
 
 </head>
 
-<body onload="startGame()">
+<body>
+    <div id="div">
+        <canvas id="canvas" width="800" height="480"></canvas>
+    </div>
     <script>
 
-        var name = prompt('Player name.')
-        var myGamePiece
-        var players = []
-        var chat = []
-        var width = 800
-        var height = 480
-        var size = 30
-        var speed = 3
-        var fps = 60
-        var socketUrl = '127.0.0.1:3000'
-
+        const socketUrl = 'localhost:3000'
         const socket = io(socketUrl)
+        let user
+        const players = []
+
+        const SCALE = 2
+        const WIDTH = 16.1
+        const HEIGHT = 18.1
+        const SCALED_WIDTH = SCALE * WIDTH
+        const SCALED_HEIGHT = SCALE * HEIGHT
+        const CYCLE_LOOP = [0, 1, 0, 2]
+        const FACING_DOWN = 0
+        const FACING_UP = 1
+        const FACING_LEFT = 2
+        const FACING_RIGHT = 3
+        const FRAME_LIMIT = 12
+        const MOVEMENT_SPEED = 1
+
+        // let currentDirection = 0
+        // let currentLoopIndex = 0
+        let frameCount = 0
+
+        let canvas = document.getElementById('canvas')
+        let ctx = canvas.getContext('2d')
+        let keyPresses = {}
 
         socket.on(`playerconnected`, data => {
             data.forEach(p => {
                 if (p.id !== socket.id && !players.some(p2 => p2.id === p.id)) {
-                    console.log(p.name)
-                    players.push(new component(30, 30, "assets/smiley.gif", p.x, p.y, "image", p.id, p.name))
+                    console.log(p.name, p.x, p.y)
+                    players.push(new component(SCALED_WIDTH, SCALED_HEIGHT, p.x, p.y, p.id, p.name))
                 }
             })
         })
 
         socket.on('playermove', data => {
-            const player = players.find(p => p.id === data.id)
-            if (player) {
-                player.x = data.x
-                player.y = data.y
+            const index = players.findIndex(p => p.id === data.id)
+            if (index !== -1) {
+                players[index].x = data.x
+                players[index].y = data.y
+                players[index].currentDirection = data.currentDirection
+                players[index].currentLoopIndex = data.currentLoopIndex
             }
         })
 
-        socket.on('chat-world', data => {
-            if (chat.length > 99) {
-                chat.splice(0, 1)
-            }
-            chat.push(` ${data.name}: ${data.message}\n`)
-            myGameArea.chat.value = chat.join("")
-            myGameArea.chat.scrollTop = myGameArea.chat.scrollHeight
-        })
+        // socket.on('chat-world', data => {
+        //     if (chat.length > 99) {
+        //         chat.splice(0, 1)
+        //     }
+        //     chat.push(` ${data.name}: ${data.message}\n`)
+        //     myGameArea.chat.value = chat.join("")
+        //     myGameArea.chat.scrollTop = myGameArea.chat.scrollHeight
+        // })
 
         socket.on('logout', id => {
             const index = players.findIndex(p => p.id === id)
             players.splice(index, 1)
-            // delete players[index]
         })
 
-        function startGame() {
-            const rand = Math.floor(Math.random() * 100) + 10
-            myGamePiece = new component(30, 30, "assets/smiley.gif", rand, 120, "image", 'user', name)
-            myGameArea.start()
-            socket.emit('login', { x: rand, y: 120, name })
-        }
+        // const img = new Image()
+        // img.src = 'https://opengameart.org/sites/default/files/Green-Cap-Character-16x18.png'
 
-        var myGameArea = {
-            canvas: document.createElement("canvas"),
-            input: document.createElement('input'),
-            chat: document.createElement('textarea'),
+        window.onload = () => {
 
-            start: function () {
-                this.canvas.id = 'canvas'
-                this.canvas.width = width
-                this.canvas.height = height
-                this.context = this.canvas.getContext("2d")
+            const name = prompt('Player name')
+            user = new component(30, 30, 100, 100, socket.id, name)
 
-                this.input.id = 'input'
-                this.input.autofocus = true
-                this.input.hidden = true
-
-                this.chat.id = 'chat'
-                this.chat.disabled = true
-                this.chat.focus = true
-                this.chat.style = 'resize:none'
-                // this.chat.cols = 73
-                // this.chat.rows = 7
-
-                document.body.insertBefore(this.canvas, document.body.childNodes[0])
-                document.body.insertBefore(this.chat, document.body.childNodes[1])
-                document.body.insertBefore(this.input, document.body.childNodes[2])
-
-                this.interval = setInterval(updateGameArea, 1000 / fps)
-
-                window.addEventListener('keydown', function (e) {
-                    myGameArea.keys = (myGameArea.keys || [])
-                    myGameArea.keys[e.keyCode] = (e.type == "keydown")
-
-                    // enter
-                    if (myGameArea.keys && myGameArea.keys[13]) {
-                        if (myGameArea.input.hidden && !myGameArea.input.value) {
-                            myGameArea.input.hidden = false
-                            this.input.select()
-                        } else if (!myGameArea.input.hidden && myGameArea.input.value) {
-                            myGameArea.input.hidden = false
-                            socket.emit('chat', { type: 'world', name: myGamePiece.name, message: myGameArea.input.value })
-                            myGameArea.input.value = ''
-                        } else {
-                            myGameArea.input.hidden = true
-                        }
-                    }
-                })
-                window.addEventListener('keyup', function (e) {
-                    myGameArea.keys[e.keyCode] = (e.type == "keydown")
-                })
-            },
-            clear: function () {
-                this.context.clearRect(0, 0, this.canvas.width, this.canvas.height)
-            },
-            stop: function () {
-                clearInterval(this.interval)
+            window.addEventListener('keydown', keyDownListener)
+            function keyDownListener(event) {
+                keyPresses[event.key] = true
             }
 
+            window.addEventListener('keyup', keyUpListener)
+            function keyUpListener(event) {
+                keyPresses[event.key] = false
+            }
+
+            socket.emit('login', { x: 0, y: 0, name })
+
+            setInterval(gameLoop, 1000 / 50)
+
         }
 
-        function component(width, height, color, x, y, type, id, name) {
+        function gameLoop() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height)
+
+            let hasMoved = false
+
+            if (keyPresses.w) {
+                moveCharacter(0, -MOVEMENT_SPEED, FACING_UP)
+                hasMoved = true
+            } else if (keyPresses.s) {
+                moveCharacter(0, MOVEMENT_SPEED, FACING_DOWN)
+                hasMoved = true
+            }
+
+            if (keyPresses.a) {
+                moveCharacter(-MOVEMENT_SPEED, 0, FACING_LEFT)
+                hasMoved = true
+            } else if (keyPresses.d) {
+                moveCharacter(MOVEMENT_SPEED, 0, FACING_RIGHT)
+                hasMoved = true
+            }
+
+            if (hasMoved) {
+                frameCount++
+                if (frameCount >= FRAME_LIMIT) {
+                    frameCount = 0
+                    user.currentLoopIndex++
+                    if (user.currentLoopIndex >= CYCLE_LOOP.length) {
+                        user.currentLoopIndex = 0
+                    }
+                }
+            }
+
+            if (!hasMoved) {
+                user.currentLoopIndex = 0
+            }
+
+            user.update()
+
+            players.forEach(p => {
+                p.update()
+            })
+
+            if (hasMoved) socket.emit('move', { x: user.x, y: user.y, currentDirection: user.currentDirection, currentLoopIndex: user.currentLoopIndex })
+        }
+
+        function drawName(name, x, y) {
+            ctx.fillStyle = "black"
+            ctx.font = "20px"
+            ctx.textAlign = 'center'
+            ctx.fillText(name, x + 15, y + 45)
+        }
+
+        function drawFrame(image, frameX, frameY, canvasX, canvasY) {
+            ctx.drawImage(image,
+                frameX * WIDTH, frameY * HEIGHT, WIDTH, HEIGHT,
+                canvasX, canvasY, SCALED_WIDTH, SCALED_HEIGHT)
+        }
+
+        function moveCharacter(deltaX, deltaY, direction) {
+            if (user.x + deltaX > 0 && user.x + SCALED_WIDTH + deltaX < canvas.width) {
+                user.x += deltaX
+            }
+            if (user.y + deltaY > 0 && user.y + SCALED_HEIGHT + deltaY < canvas.height) {
+                user.y += deltaY
+            }
+            user.currentDirection = direction
+        }
+
+        function component(width, height, x, y, id, name) {
+            console.log(name)
             this.id = id
             this.name = name
-            this.type = type
-            if (type == "image") {
-                this.image = new Image()
-                this.image.src = color
-            }
+            this.image = new Image()
+            this.image.src = 'https://opengameart.org/sites/default/files/Green-Cap-Character-16x18.png'
             this.width = width
             this.height = height
             this.speedX = 0
             this.speedY = 0
             this.x = x
             this.y = y
-            this.update = function () {
-                ctx = myGameArea.context
-                if (type == "image") {
-                    ctx.drawImage(this.image,
-                        this.x,
-                        this.y,
-                        this.width, this.height)
-                } else {
-                    ctx.fillStyle = color
-                    ctx.fillRect(this.x, this.y, this.width, this.height)
-                }
-                drawText(name, this.x, this.y)
+            this.currentDirection = 0
+            this.currentLoopIndex = 0
+            this.loop = [0, 1, 0, 2]
+
+            this.update = () => {
+
+                // ctx.drawImage(
+                //     this.image,
+                //     CYCLE_LOOP[this.currentLoopIndex] * WIDTH,
+                //     this.currentDirection * HEIGHT,
+                //     WIDTH,
+                //     HEIGHT,
+                //     this.x,
+                //     this.y,
+                //     SCALED_WIDTH,
+                //     SCALED_HEIGHT
+                // )
+
+                drawFrame(this.image, this.loop[this.currentLoopIndex], this.currentDirection, this.x, this.y)
+
+                drawName(this.name, this.x, this.y)
+
+                // this.currentLoopIndex = 0
             }
-            this.newPos = function () {
-                this.x += this.speedX
-                this.y += this.speedY
-            }
-        }
-
-        function updateGameArea() {
-            myGameArea.clear()
-
-            myGamePiece.image.src = "assets/smiley.gif"
-
-            myGamePiece.speedX = 0
-            myGamePiece.speedY = 0
-
-            // const block = players.some(p => myGamePiece.x > p.x + 15 && myGamePiece.y < p.y + 15)
-
-            // if (!block) {
-            if (myGamePiece.x > 0 && myGameArea.keys && myGameArea.keys[37]) {
-                myGamePiece.image.src = "assets/angry.gif"
-                myGamePiece.speedX = -speed
-            }
-            if (myGamePiece.x < width - size && myGameArea.keys && myGameArea.keys[39]) { myGamePiece.speedX = speed }
-            if (myGamePiece.y > 20 && myGameArea.keys && myGameArea.keys[38]) { myGamePiece.speedY = -speed }
-            if (myGamePiece.y < height - size && myGameArea.keys && myGameArea.keys[40]) { myGamePiece.speedY = speed }
-
-            if (myGamePiece.speedX || myGamePiece.speedY) socket.emit('move', { x: myGamePiece.x, y: myGamePiece.y })
-            // }
-
-            myGamePiece.newPos()
-            myGamePiece.update()
-
-            players.forEach(p => {
-                p.newPos()
-                p.update()
-            })
 
         }
 
-        function drawText(txt, posX, posY) {
-            myGameArea.context.fillStyle = "black"
-            myGameArea.context.font = "20px Comic Sans MS"
-            myGameArea.context.textAlign = 'center'
-            myGameArea.context.fillText(txt, posX, posY);
-        }
+        // var name = prompt('Player name.', 'Name')
+        // var message = ''
+        // var user
+        // var players = []
+        // var chat = []
+        // var width = 800
+        // var height = 480
+        // var size = 30
+        // var speed = 3
+        // var fps = 60
+        // var userChatTimeout = { enable: false }
+        // var test = new Image()
+        // var obj = { enable: false }
+        // var socketUrl = 'localhost:3000'
 
-        function clearmove() {
-            // myGamePiece.image.src = "assets/smiley.gif"
-            myGamePiece.speedX = 0
-            myGamePiece.speedY = 0
-        }
+        // const socket = io(socketUrl)
+
+        // socket.on(`playerconnected`, data => {
+        //     data.forEach(p => {
+        //         if (p.id !== socket.id && !players.some(p2 => p2.id === p.id)) {
+        //             console.log(p.name)
+        //             players.push(new component(30, 30, size, "assets/smiley.gif", p.x, p.y, "image", p.id, p.name))
+        //         }
+        //     })
+        // })
+
+        // socket.on('playermove', data => {
+        //     const player = players.find(p => p.id === data.id)
+        //     if (player) {
+        //         player.x = data.x
+        //         player.y = data.y
+        //     }
+        // })
+
+        // socket.on('chat-world', data => {
+        //     if (chat.length > 99) {
+        //         chat.splice(0, 1)
+        //     }
+        //     chat.push(` ${data.name}: ${data.message}\n`)
+        //     myGameArea.chat.value = chat.join("")
+        //     myGameArea.chat.scrollTop = myGameArea.chat.scrollHeight
+        // })
+
+        // socket.on('logout', id => {
+        //     const index = players.findIndex(p => p.id === id)
+        //     players.splice(index, 1)
+        //     // delete players[index]
+        // })
+
+        // window.onload = () => {
+        //     const x = Math.floor(Math.random() * (width - 30)) + 30
+        //     const y = Math.floor(Math.random() * (height - 30)) + 30
+        //     console.log(x, y)
+        //     user = new component(30, 30, size, "assets/smiley.gif", x, y, "image", 'user', name)
+        //     myGameArea.start()
+        //     socket.emit('login', { x, y, name })
+        // }
+
+        // var myGameArea = {
+        //     canvas: document.getElementById("canvas"),
+        //     input: document.createElement('input'),
+        //     name: document.createElement('input'),
+        //     playerName: document.createElement('input'),
+        //     chat: document.createElement('textarea'),
+        //     textBox: document.createElement('textarea'),
+        //     // userImg: new Image(),
+
+        //     start: function () {
+
+        //         this.canvas.width = width
+        //         this.canvas.height = height
+        //         this.context = this.canvas.getContext("2d")
+
+        //         this.input.id = 'input'
+        //         this.input.autofocus = true
+        //         this.input.hidden = true
+        //         this.input.max = 100
+
+        //         this.chat.id = 'chat'
+        //         this.chat.disabled = true
+        //         this.chat.focus = true
+        //         this.chat.hidden = true
+        //         this.chat.style = 'resize:none'
+        //         // this.chat.cols = 73
+        //         // this.chat.rows = 7
+
+        //         this.textBox.id = 'textbox'
+        //         this.textBox.disabled = true
+        //         this.textBox.focus = true
+        //         this.textBox.hidden = true
+
+        //         // this.name.name = 'name'
+        //         // this.playerName.name = 'playername'
+
+        //         // this.userImg.id = 'userImg'
+        //         // this.userImg.src = 'assets/body_male.png'
+
+        //         // document.body.insertBefore(this.canvas, document.body.childNodes[0])
+        //         document.body.insertBefore(this.chat, document.body.childNodes[1])
+        //         document.body.insertBefore(this.input, document.body.childNodes[2])
+        //         // document.body.insertBefore(this.userImg, document.body.childNodes[3])
+        //         // document.body.insertBefore(this.name, document.body.childNodes[4])
+        //         // document.body.insertBefore(this.playerName, document.body.childNodes[4])
+        //         document.body.insertBefore(this.textBox, document.body.childNodes[5])
+
+        //         this.interval = setInterval(updateGameArea, 1000 / fps)
+
+        //         window.addEventListener('keydown', function (e) {
+        //             myGameArea.keys = (myGameArea.keys || [])
+        //             myGameArea.keys[e.keyCode] = (e.type == "keydown")
+
+        //             // enter
+        //             if (myGameArea.keys && myGameArea.keys[13]) {
+        //                 if (myGameArea.input.hidden && !myGameArea.input.value) {
+        //                     myGameArea.input.hidden = false
+        //                     myGameArea.chat.hidden = false
+        //                     this.input.select()
+        //                 } else if (!myGameArea.input.hidden && myGameArea.input.value) {
+        //                     myGameArea.input.hidden = false
+        //                     myGameArea.chat.hidden = false
+        //                     myGameArea.textBox.hidden = false
+        //                     message = myGameArea.input.value
+        //                     socket.emit('chat', { type: 'world', name: user.name, message: myGameArea.input.value })
+        //                     myGameArea.input.value = ''
+
+        //                     clearTimeout(userChatTimeout)
+        //                     userChatTimeout = setTimeout(() => myGameArea.textBox.hidden = true, 5000)
+
+        //                 } else {
+        //                     myGameArea.input.hidden = true
+        //                     myGameArea.chat.hidden = true
+        //                 }
+        //             }
+        //         })
+        //         window.addEventListener('keyup', function (e) {
+        //             myGameArea.keys[e.keyCode] = (e.type == "keydown")
+        //         })
+        //     },
+        //     clear: function () {
+        //         this.context.clearRect(0, 0, this.canvas.width, this.canvas.height)
+        //     },
+        //     stop: function () {
+        //         clearInterval(this.interval)
+        //     }
+
+        // }
+
+        // function component(width, height, size, color, x, y, type, id, name) {
+        //     this.id = id
+        //     this.name = name
+        //     this.type = type
+        //     this.size = size
+        //     if (type == "image") {
+        //         this.image = new Image()
+        //         this.image.src = color
+        //     }
+        //     this.width = width
+        //     this.height = height
+        //     this.speedX = 0
+        //     this.speedY = 0
+        //     this.x = x
+        //     this.y = y
+        //     this.update = function () {
+        //         ctx = myGameArea.context
+        //         if (type == "image") {
+        //             ctx.drawImage(this.image,
+        //                 this.x,
+        //                 this.y,
+        //                 this.width, this.height)
+        //         } else {
+        //             ctx.fillStyle = color
+        //             ctx.fillRect(this.x, this.y, this.width, this.height)
+        //         }
+        //         drawName(this.name, this.x, this.y)
+        //         drawTextBox(message, this.x, this.y)
+        //     }
+        //     this.newPos = function () {
+        //         this.x += this.speedX
+        //         this.y += this.speedY
+        //     }
+
+        // }
+
+        // function updateGameArea() {
+        //     myGameArea.clear()
+
+        //     user.image.src = "assets/smiley.gif"
+
+        //     user.speedX = 0
+        //     user.speedY = 0
+
+        //     if (user.x > 0 && myGameArea.keys && myGameArea.keys[37]) {
+        //         // user.image.src = "assets/angry.gif"
+        //         user.speedX = -speed
+        //     }
+
+        //     if (user.x < width - size && myGameArea.keys && myGameArea.keys[39]) {
+        //         user.speedX = speed
+        //     }
+
+        //     if (user.y > 10 && myGameArea.keys && myGameArea.keys[38]) {
+        //         user.speedY = -speed
+        //     }
+
+        //     if (user.y < height - (size + 25) && myGameArea.keys && myGameArea.keys[40]) {
+        //         user.speedY = speed
+        //     }
+
+        //     if (user.speedX || user.speedY) socket.emit('move', { x: user.x, y: user.y })
+
+        //     user.newPos()
+        //     user.update()
+
+        //     players.forEach(p => {
+        //         p.newPos()
+        //         p.update()
+        //     })
+
+        // }
+
+        // function drawName(name, posX, posY) {
+        //     myGameArea.name.value = name
+        //     myGameArea.name.disabled = true
+        //     myGameArea.name.style = `
+        //         position:absolute;
+        //         left: ${posX - 52}px;
+        //         top: ${posY + 30}px;
+        //         width:134px;
+        //         text-align: center;
+        //         background: transparent;
+        //         border: none;
+        //         font:16px Comic Sans MS`
+        // }
+
+        // function drawPlayerName2(name, posX, posY) {
+        //     myGameArea.playerName.value = name
+        //     myGameArea.playerName.disabled = true
+        //     myGameArea.playerName.style = `
+        //         position:absolute;
+        //         left: ${posX - 52}px;
+        //         top: ${posY + 30}px;
+        //         width:134px;
+        //         text-align: center;
+        //         background: transparent;
+        //         border: none;
+        //         font:16px Comic Sans MS`
+        // }
+
+        // function drawTextBox(message, posX, posY) {
+        //     // myGameArea.context.fillStyle = "black"
+        //     // myGameArea.context.font = "20px"
+        //     // myGameArea.context.textAlign = 'center'
+        //     // myGameArea.context.fillText(message, posX - 40, posY - 65)
+
+        //     myGameArea.textBox.value = message
+        //     myGameArea.textBox.cols = 1
+        //     // myGameArea.textBox.disabled = true
+        //     if (posX < 85) {
+        //         posX = posX
+        //     } else if (posX > width - 115) {
+        //         posX = posX - 175
+        //     } else {
+        //         posX = posX - 85
+        //     }
+
+        //     if (posY < 40) {
+        //         posY = window.height + (height - (posY + 50))
+        //     } else if (posY > height - 50) {
+        //         posY = window.height + (height - (posY + 10))
+        //     } else {
+        //         posY = window.height + (height - (posY - 45))
+        //     }
+
+        //     myGameArea.textBox.style = `
+        //     color: white;
+        //     opacity: 0.6;
+        //     background-color: black;
+        //     position: absolute;
+        //     left: ${posX}px;
+        //     bottom: ${posY}px;
+        //     width: 13.9%;
+        //     min-height: 1.2;
+        //     max-height: 100%;
+        //     resize: none;
+        //     font-size: 14px;`
+        // }
+
+        // function drawName(txt, posX, posY) {
+        //     myGameArea.context.fillStyle = "black"
+        //     myGameArea.context.font = "20px"
+        //     myGameArea.context.textAlign = 'center'
+        //     myGameArea.context.fillText(txt, posX + 15, posY + 45)
+        //     // myGameArea.context.strokeRect(posX - 60, posY - 80, 150, 70)
+        //     // myGameArea.context.style = `left: ${posX-52}px;top: ${posY}px;width:134px`
+
+        //     // myGameArea.name.value = txt
+        //     // myGameArea.name.style = `position:absolute;
+        //     // left: ${posX - 52}px;
+        //     // top: ${posY}px;
+        //     // width:134px;
+        //     // text-align: center;`
+        // }
     </script>
 
 </body>
