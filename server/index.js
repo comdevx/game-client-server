@@ -29,17 +29,18 @@ io.on('connection', (socket) => {
         data = { ...data, id: socket.id }
         console.log(data)
         playerList.push(data)
-        console.log(playerList)
         io.emit(`playerconnected`, playerList)
     })
 
     socket.on('move', data => {
         index = playerList.findIndex(p => p.id === socket.id)
-        console.log(index, playerList[index].x, playerList[index].y, data.x, data.y)
-        // data = { ...data, id: socket.id }
-        // playerList[index] = data
-        Object.assign(playerList[index], data)
-        io.emit('playermove', playerList[index])
+        if (playerList[index]) {
+            console.log(index, playerList[index].x, playerList[index].y, data.x, data.y)
+            // data = { ...data, id: socket.id }
+            // playerList[index] = data
+            Object.assign(playerList[index], data)
+            io.emit('playermove', playerList[index])
+        }
     })
 
     socket.on('chat', data => {

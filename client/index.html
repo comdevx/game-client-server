@@ -62,10 +62,7 @@
         const FRAME_LIMIT = 12
         const MOVEMENT_SPEED = 1
 
-        // let currentDirection = 0
-        // let currentLoopIndex = 0
         let frameCount = 0
-
         let canvas = document.getElementById('canvas')
         let ctx = canvas.getContext('2d')
         let keyPresses = {}
@@ -109,7 +106,7 @@
         window.onload = () => {
 
             const name = prompt('Player name')
-            user = new component(30, 30, 100, 100, socket.id, name)
+            user = new component(30, 30, 0, 0, socket.id, name)
 
             window.addEventListener('keydown', keyDownListener)
             function keyDownListener(event) {
@@ -203,8 +200,6 @@
             this.image.src = 'https://opengameart.org/sites/default/files/Green-Cap-Character-16x18.png'
             this.width = width
             this.height = height
-            this.speedX = 0
-            this.speedY = 0
             this.x = x
             this.y = y
             this.currentDirection = 0
@@ -229,7 +224,7 @@
 
                 drawName(this.name, this.x, this.y)
 
-                // this.currentLoopIndex = 0
+                this.currentLoopIndex = 0
             }
 
         }
