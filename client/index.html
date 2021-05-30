@@ -22,7 +22,7 @@
 <body>
     <div id="div">
         <canvas id="canvas" width="800" height="480"></canvas>
-        <textarea id="textbox"></textarea>
+        <!-- <textarea id="textbox"></textarea> -->
     </div>
     <div id="div2">
         <textarea id="chat"></textarea>
@@ -81,16 +81,17 @@
             resize:none
         `
 
-        let textBox = document.getElementById('textbox')
-        textBox.id = 'textbox'
-        textBox.disabled = true
-        textBox.focus = true
-        textBox.hidden = true
+        // let textBox = document.createElement('textarea')
+        // textBox.id = socket.id
+        // textBox.disabled = true
+        // textBox.focus = true
+        // textBox.hidden = true
+        // document.body.insertBefore(textBox, document.body.childNodes[0])
 
         socket.on(`playerconnected`, data => {
             data.forEach(p => {
                 if (p.id !== socket.id && !players.some(p2 => p2.id === p.id)) {
-                    console.log(p.name, p.x, p.y)
+                    console.log(p)
                     players.push(new component(SCALED_WIDTH, SCALED_HEIGHT, p.x, p.y, p.id, p.name))
                 }
             })
@@ -113,6 +114,12 @@
             messageList.push(` ${data.name}: ${data.message}\n`)
             chat.value = messageList.join("")
             chat.scrollTop = chat.scrollHeight
+            const index = players.findIndex(p => p.name === data.name)
+            if (players[index]) {
+                console.log(data.message)
+                players[index].message = data.message
+                // players[index].TextBox()
+            }
         })
 
         socket.on('logout', id => {
@@ -138,7 +145,7 @@
                     } else if (!input.hidden && input.value) {
                         input.hidden = false
                         chat.hidden = false
-                        textBox.hidden = false
+                        user.textBox.hidden = false
                         message = input.value
                         socket.emit('chat', { type: 'world', name: user.name, message: input.value })
                         input.value = ''
@@ -202,16 +209,17 @@
 
             user.update()
 
-            if (message) {
-                drawTextBox(
-                    message,
-                    user.x,
-                    user.y
-                )
-            }
+            // if (message) {
+            //     drawTextBox(
+            //         message,
+            //         user.x,
+            //         user.y
+            //     )
+            // }
 
             players.forEach(p => {
                 p.update()
+                p.textBox()
             })
 
             if (hasMoved) {
@@ -242,46 +250,37 @@
             user.currentDirection = direction
         }
 
-        function drawTextBox(message, posX, posY) {
-            // myGameArea.context.fillStyle = "black"
-            // myGameArea.context.font = "20px"
-            // myGameArea.context.textAlign = 'center'
-            // myGameArea.context.fillText(message, posX - 40, posY - 65)
+        // function drawTextBox(user, message, posX, posY) {
+        //     user.textBox.value = message
+        //     user.textBox.cols = 1
 
-            textBox.value = message
-            textBox.cols = 1
-            // myGameArea.textBox.disabled = true
+        //     if (posX < 85) {
+        //         posX = (window.innerWidth / 2) - 400
+        //     } else if (posX > canvas.width - 119) {
+        //         posX = (window.innerWidth / 2) + 195
+        //     } else {
+        //         posX = (window.innerWidth / 2) - 400 + posX - 85
+        //     }
 
-            // console.log(window.width)
-            // posX = (canvas.width / 2) - (400 + posX)
+        //     if (posY < 50) {
+        //         posY = posY + 60
+        //     } else {
+        //         posY = posY - 40
+        //     }
 
-            if (posX < 85) {
-                posX = (window.innerWidth / 2) - 400
-            } else if (posX > canvas.width - 119) {
-                posX = (window.innerWidth / 2) + 195
-            } else {
-                posX = (window.innerWidth / 2) - 400 + posX - 85
-            }
-
-            if (posY < 50) {
-                posY = posY + 60
-            } else {
-                posY = posY - 40
-            }
-
-            textBox.style = `
-                color: white;
-                opacity: 0.6;
-                background-color: black;
-                position: absolute;
-                left: ${posX}px;
-                top: ${posY}px;
-                width: 200px;
-                min-height: 1.2;
-                max-height: 100%;
-                resize: none;
-                font-size: 14px;`
-        }
+        //     user.textBox.style = `
+        //         color: white;
+        //         opacity: 0.6;
+        //         background-color: black;
+        //         position: absolute;
+        //         left: ${posX}px;
+        //         top: ${posY}px;
+        //         width: 200px;
+        //         min-height: 1.2;
+        //         max-height: 100%;
+        //         resize: none;
+        //         font-size: 14px;`
+        // }
 
         function component(width, height, x, y, id, name) {
 
@@ -296,6 +295,16 @@
             this.currentDirection = 0
             this.currentLoopIndex = 0
             this.loop = [0, 1, 0, 2]
+            this.message = ''
+
+            // this.textBox = () => {
+            this.textBox = document.createElement('textarea')
+            this.textBox.id = id
+            this.textBox.disabled = true
+            this.textBox.focus = true
+            this.textBox.hidden = true
+            document.body.insertBefore(this.textBox, document.body.childNodes[0])
+            // }
 
             this.update = () => {
 
@@ -313,11 +322,45 @@
                 )
 
                 // this.currentLoopIndex = 0
-                // drawTextBox(
-                //     message,
-                //     this.x,
-                //     this.y
-                // )
+
+            }
+
+            this.textBox = () => {
+
+                if (this.message) {
+                    test = document.getElementById(this.id)
+                    test.value = this.message
+                    test.cols = 1
+                    test.disabled = true
+                    test.hidden = false
+
+                    if (this.x < 85) {
+                        posX = (window.innerWidth / 2) - 400
+                    } else if (this.x > canvas.width - 119) {
+                        posX = (window.innerWidth / 2) + 195
+                    } else {
+                        posX = (window.innerWidth / 2) - 400 + this.x - 85
+                    }
+
+                    if (this.y < 50) {
+                        posY = this.y + 60
+                    } else {
+                        posY = this.y - 40
+                    }
+
+                    test.style = `
+                color: white;
+                opacity: 0.6;
+                background-color: black;
+                position: absolute;
+                left: ${posX}px;
+                top: ${posY}px;
+                width: 200px;
+                min-height: 1.2;
+                max-height: 100%;
+                resize: none;
+                font-size: 14px;`
+                }
 
             }
 
