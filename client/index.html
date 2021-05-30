@@ -9,29 +9,10 @@
         }
 
         #canvas {
-            margin: auto;
+            margin-top: -8px;
             border: 1px solid #d3d3d3;
             background-color: #f1f1f1;
         }
-
-        #chat {
-            position: absolute;
-            left: 250px;
-            top: 335px;
-            width: 300px;
-            height: 100px;
-        }
-
-        #input {
-            position: absolute;
-            left: 250px;
-            top: 450px;
-            width: 300px;
-        }
-
-        /* #userImg {
-            position: absolute;
-        } */
     </style>
 
     <script src="https://cdn.socket.io/4.1.1/socket.io.min.js"></script>
@@ -41,6 +22,11 @@
 <body>
     <div id="div">
         <canvas id="canvas" width="800" height="480"></canvas>
+        <textarea id="textbox"></textarea>
+    </div>
+    <div id="div2">
+        <textarea id="chat"></textarea>
+        <input id="input">
     </div>
     <script>
 
@@ -48,7 +34,7 @@
         const socket = io(socketUrl)
         let user
         const players = []
-
+        const messageList = []
         const SCALE = 2
         const WIDTH = 16.1
         const HEIGHT = 18.1
@@ -66,6 +52,40 @@
         let canvas = document.getElementById('canvas')
         let ctx = canvas.getContext('2d')
         let keyPresses = {}
+        let message = ''
+        let userChatTimeout
+
+        let input = document.getElementById('input')
+        input.id = 'input'
+        input.autofocus = true
+        input.hidden = true
+        input.max = 100
+        input.style = `
+            position: absolute;
+            left: 39.5%;
+            top: 450px;
+            width: 300px;
+        `
+
+        let chat = document.getElementById('chat')
+        chat.id = 'chat'
+        chat.disabled = true
+        chat.focus = true
+        chat.hidden = true
+        chat.style = `
+            position: absolute;
+            left: 39.5%;
+            top: 335px;
+            width: 300px;
+            height: 100px;
+            resize:none
+        `
+
+        let textBox = document.getElementById('textbox')
+        textBox.id = 'textbox'
+        textBox.disabled = true
+        textBox.focus = true
+        textBox.hidden = true
 
         socket.on(`playerconnected`, data => {
             data.forEach(p => {
@@ -86,41 +106,61 @@
             }
         })
 
-        // socket.on('chat-world', data => {
-        //     if (chat.length > 99) {
-        //         chat.splice(0, 1)
-        //     }
-        //     chat.push(` ${data.name}: ${data.message}\n`)
-        //     myGameArea.chat.value = chat.join("")
-        //     myGameArea.chat.scrollTop = myGameArea.chat.scrollHeight
-        // })
+        socket.on('chat-world', data => {
+            if (messageList.length > 99) {
+                messageList.splice(0, 1)
+            }
+            messageList.push(` ${data.name}: ${data.message}\n`)
+            chat.value = messageList.join("")
+            chat.scrollTop = chat.scrollHeight
+        })
 
         socket.on('logout', id => {
             const index = players.findIndex(p => p.id === id)
             players.splice(index, 1)
         })
 
-        // const img = new Image()
-        // img.src = 'https://opengameart.org/sites/default/files/Green-Cap-Character-16x18.png'
-
         window.onload = () => {
 
             const name = prompt('Player name')
             user = new component(30, 30, 0, 0, socket.id, name)
 
-            window.addEventListener('keydown', keyDownListener)
-            function keyDownListener(event) {
-                keyPresses[event.key] = true
-            }
+            window.addEventListener('keydown', (event) => {
+                canvas.keys = (canvas.keys || [])
+                canvas.keys[event.keyCode] = (event.type == "keydown")
 
-            window.addEventListener('keyup', keyUpListener)
-            function keyUpListener(event) {
-                keyPresses[event.key] = false
-            }
+                // enter
+                if (canvas.keys && canvas.keys[13]) {
+                    if (input.hidden && !input.value) {
+                        input.hidden = false
+                        chat.hidden = false
+                        input.select()
+                    } else if (!input.hidden && input.value) {
+                        input.hidden = false
+                        chat.hidden = false
+                        textBox.hidden = false
+                        message = input.value
+                        socket.emit('chat', { type: 'world', name: user.name, message: input.value })
+                        input.value = ''
+
+                        // clearTimeout(userChatTimeout)
+                        // userChatTimeout = setTimeout(() => textBox.hidden = true, 5000)
+
+                    } else {
+                        input.hidden = true
+                        chat.hidden = true
+                    }
+                }
+
+            })
+
+            window.addEventListener('keyup', (event) => {
+                canvas.keys[event.keyCode] = (event.type == "keydown")
+            })
 
             socket.emit('login', { x: 0, y: 0, name })
 
-            setInterval(gameLoop, 1000 / 50)
+            setInterval(gameLoop, 1000 / 60)
 
         }
 
@@ -129,18 +169,18 @@
 
             let hasMoved = false
 
-            if (keyPresses.w) {
+            if (canvas.keys && canvas.keys[38]) {
                 moveCharacter(0, -MOVEMENT_SPEED, FACING_UP)
                 hasMoved = true
-            } else if (keyPresses.s) {
+            } else if (canvas.keys && canvas.keys[40]) {
                 moveCharacter(0, MOVEMENT_SPEED, FACING_DOWN)
                 hasMoved = true
             }
 
-            if (keyPresses.a) {
+            if (canvas.keys && canvas.keys[37]) {
                 moveCharacter(-MOVEMENT_SPEED, 0, FACING_LEFT)
                 hasMoved = true
-            } else if (keyPresses.d) {
+            } else if (canvas.keys && canvas.keys[39]) {
                 moveCharacter(MOVEMENT_SPEED, 0, FACING_RIGHT)
                 hasMoved = true
             }
@@ -162,18 +202,28 @@
 
             user.update()
 
+            if (message) {
+                drawTextBox(
+                    message,
+                    user.x,
+                    user.y
+                )
+            }
+
             players.forEach(p => {
                 p.update()
             })
 
-            if (hasMoved) socket.emit('move', { x: user.x, y: user.y, currentDirection: user.currentDirection, currentLoopIndex: user.currentLoopIndex })
+            if (hasMoved) {
+                socket.emit('move', { x: user.x, y: user.y, currentDirection: user.currentDirection, currentLoopIndex: user.currentLoopIndex })
+            }
         }
 
         function drawName(name, x, y) {
             ctx.fillStyle = "black"
-            ctx.font = "20px"
+            ctx.font = "26px"
             ctx.textAlign = 'center'
-            ctx.fillText(name, x + 15, y + 45)
+            ctx.fillText(name, x + 15, y + 50)
         }
 
         function drawFrame(image, frameX, frameY, canvasX, canvasY) {
@@ -186,14 +236,55 @@
             if (user.x + deltaX > 0 && user.x + SCALED_WIDTH + deltaX < canvas.width) {
                 user.x += deltaX
             }
-            if (user.y + deltaY > 0 && user.y + SCALED_HEIGHT + deltaY < canvas.height) {
+            if (user.y < 420 && user.y + deltaY > 0 && user.y + SCALED_HEIGHT + deltaY < canvas.height) {
                 user.y += deltaY
             }
             user.currentDirection = direction
         }
 
+        function drawTextBox(message, posX, posY) {
+            // myGameArea.context.fillStyle = "black"
+            // myGameArea.context.font = "20px"
+            // myGameArea.context.textAlign = 'center'
+            // myGameArea.context.fillText(message, posX - 40, posY - 65)
+
+            textBox.value = message
+            textBox.cols = 1
+            // myGameArea.textBox.disabled = true
+
+            // console.log(window.width)
+            // posX = (canvas.width / 2) - (400 + posX)
+
+            if (posX < 85) {
+                posX = (window.innerWidth / 2) - 400
+            } else if (posX > canvas.width - 119) {
+                posX = (window.innerWidth / 2) + 195
+            } else {
+                posX = (window.innerWidth / 2) - 400 + posX - 85
+            }
+
+            if (posY < 50) {
+                posY = posY + 60
+            } else {
+                posY = posY - 40
+            }
+
+            textBox.style = `
+                color: white;
+                opacity: 0.6;
+                background-color: black;
+                position: absolute;
+                left: ${posX}px;
+                top: ${posY}px;
+                width: 200px;
+                min-height: 1.2;
+                max-height: 100%;
+                resize: none;
+                font-size: 14px;`
+        }
+
         function component(width, height, x, y, id, name) {
-            console.log(name)
+
             this.id = id
             this.name = name
             this.image = new Image()
@@ -208,23 +299,26 @@
 
             this.update = () => {
 
-                // ctx.drawImage(
-                //     this.image,
-                //     CYCLE_LOOP[this.currentLoopIndex] * WIDTH,
-                //     this.currentDirection * HEIGHT,
-                //     WIDTH,
-                //     HEIGHT,
+                drawFrame(
+                    this.image,
+                    this.loop[this.currentLoopIndex],
+                    this.currentDirection,
+                    this.x,
+                    this.y
+                )
+
+                drawName(this.name,
+                    this.x,
+                    this.y
+                )
+
+                // this.currentLoopIndex = 0
+                // drawTextBox(
+                //     message,
                 //     this.x,
-                //     this.y,
-                //     SCALED_WIDTH,
-                //     SCALED_HEIGHT
+                //     this.y
                 // )
 
-                drawFrame(this.image, this.loop[this.currentLoopIndex], this.currentDirection, this.x, this.y)
-
-                drawName(this.name, this.x, this.y)
-
-                this.currentLoopIndex = 0
             }
 
         }
