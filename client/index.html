@@ -112,11 +112,16 @@
                 messageList.splice(0, 1)
             }
             messageList.push(` ${data.name}: ${data.message}\n`)
-            chat.value = messageList.join("")
+            chat.value = messageList.join('')
             chat.scrollTop = chat.scrollHeight
             const index = players.findIndex(p => p.name === data.name)
             if (players[index]) {
                 players[index].message = data.message
+                clearTimeout(players[index].messageTimeout)
+                players[index].messageTimeout = setTimeout(() => {
+                    players[index].message = ''
+                    document.getElementById(players[index].chatId).hidden = true
+                }, 5000)
             }
         })
 
@@ -149,8 +154,12 @@
                         socket.emit('chat', { type: 'world', name: user.name, message: input.value })
                         input.value = ''
 
-                        // clearTimeout(userChatTimeout)
-                        // userChatTimeout = setTimeout(() => textBox.hidden = true, 5000)
+                        // hide message after pressed enter in 5 sec
+                        clearTimeout(user.messageTimeout)
+                        user.messageTimeout = setTimeout(() => {
+                            user.message = ''
+                            document.getElementById(user.chatId).hidden = true
+                        }, 5000)
 
                     } else {
                         input.hidden = true
@@ -215,7 +224,12 @@
             })
 
             if (hasMoved) {
-                socket.emit('move', { x: user.x, y: user.y, currentDirection: user.currentDirection, currentLoopIndex: user.currentLoopIndex })
+                socket.emit('move', {
+                    x: user.x,
+                    y: user.y,
+                    currentDirection: user.currentDirection,
+                    currentLoopIndex: user.currentLoopIndex
+                })
             }
         }
 
@@ -232,58 +246,32 @@
 
         function drawName(name, x, y) {
             ctx.fillStyle = "black"
-            ctx.font = "26px"
+            ctx.font = "12px Tahoma"
             ctx.textAlign = 'center'
             ctx.fillText(name, x + 15, y + 50)
         }
 
         function drawFrame(image, frameX, frameY, canvasX, canvasY) {
             ctx.drawImage(image,
-                frameX * WIDTH, frameY * HEIGHT, WIDTH, HEIGHT,
-                canvasX, canvasY, SCALED_WIDTH, SCALED_HEIGHT)
+                frameX * WIDTH,
+                frameY * HEIGHT,
+                WIDTH,
+                HEIGHT,
+                canvasX,
+                canvasY,
+                SCALED_WIDTH,
+                SCALED_HEIGHT)
         }
 
         function moveCharacter(deltaX, deltaY, direction) {
             if (user.x + deltaX > 0 && user.x + SCALED_WIDTH + deltaX < canvas.width) {
                 user.x += deltaX
             }
-            if (user.y < 420 && user.y + deltaY > 0 && user.y + SCALED_HEIGHT + deltaY < canvas.height) {
+            if (user.y + deltaY > 0 && user.y + SCALED_HEIGHT + 20 + deltaY < canvas.height) {
                 user.y += deltaY
             }
             user.currentDirection = direction
         }
-
-        // function drawTextBox(user, message, posX, posY) {
-        //     user.textBox.value = message
-        //     user.textBox.cols = 1
-
-        //     if (posX < 85) {
-        //         posX = (window.innerWidth / 2) - 400
-        //     } else if (posX > canvas.width - 119) {
-        //         posX = (window.innerWidth / 2) + 195
-        //     } else {
-        //         posX = (window.innerWidth / 2) - 400 + posX - 85
-        //     }
-
-        //     if (posY < 50) {
-        //         posY = posY + 60
-        //     } else {
-        //         posY = posY - 40
-        //     }
-
-        //     user.textBox.style = `
-        //         color: white;
-        //         opacity: 0.6;
-        //         background-color: black;
-        //         position: absolute;
-        //         left: ${posX}px;
-        //         top: ${posY}px;
-        //         width: 200px;
-        //         min-height: 1.2;
-        //         max-height: 100%;
-        //         resize: none;
-        //         font-size: 14px;`
-        // }
 
         function component(width, height, x, y, id, name, chatId) {
 
@@ -300,15 +288,14 @@
             this.currentLoopIndex = 0
             this.loop = [0, 1, 0, 2]
             this.message = ''
+            this.messageTimeout = 0
 
-            // this.textBox = () => {
             this.textBox = document.createElement('textarea')
             this.textBox.id = chatId
             this.textBox.disabled = true
             this.textBox.focus = true
             this.textBox.hidden = true
             document.body.insertBefore(this.textBox, document.body.childNodes[0])
-            // }
 
             this.update = () => {
 
@@ -331,12 +318,13 @@
 
             this.drawTextBox = () => {
 
-                if (this.message) {
-                    test = document.getElementById(this.chatId)
-                    test.value = this.message
-                    test.cols = 1
-                    test.disabled = true
-                    test.hidden = false
+                if (this.message && !this.textBox.hidden) {
+
+                    const messageBox = document.getElementById(this.chatId)
+                    messageBox.value = this.message
+                    // messageBox.cols = 1
+                    messageBox.disabled = true
+                    messageBox.hidden = false
 
                     if (this.x < 85) {
                         posX = (window.innerWidth / 2) - 400
@@ -352,7 +340,7 @@
                         posY = this.y - 40
                     }
 
-                    test.style = `
+                    messageBox.style = `
                         color: white;
                         opacity: 0.6;
                         background-color: black;
@@ -365,314 +353,13 @@
                         resize: none;
                         font-size: 14px;
                     `
+
                 }
 
             }
 
         }
 
-        // var name = prompt('Player name.', 'Name')
-        // var message = ''
-        // var user
-        // var players = []
-        // var chat = []
-        // var width = 800
-        // var height = 480
-        // var size = 30
-        // var speed = 3
-        // var fps = 60
-        // var userChatTimeout = { enable: false }
-        // var test = new Image()
-        // var obj = { enable: false }
-        // var socketUrl = 'localhost:3000'
-
-        // const socket = io(socketUrl)
-
-        // socket.on(`playerconnected`, data => {
-        //     data.forEach(p => {
-        //         if (p.id !== socket.id && !players.some(p2 => p2.id === p.id)) {
-        //             console.log(p.name)
-        //             players.push(new component(30, 30, size, "assets/smiley.gif", p.x, p.y, "image", p.id, p.name))
-        //         }
-        //     })
-        // })
-
-        // socket.on('playermove', data => {
-        //     const player = players.find(p => p.id === data.id)
-        //     if (player) {
-        //         player.x = data.x
-        //         player.y = data.y
-        //     }
-        // })
-
-        // socket.on('chat-world', data => {
-        //     if (chat.length > 99) {
-        //         chat.splice(0, 1)
-        //     }
-        //     chat.push(` ${data.name}: ${data.message}\n`)
-        //     myGameArea.chat.value = chat.join("")
-        //     myGameArea.chat.scrollTop = myGameArea.chat.scrollHeight
-        // })
-
-        // socket.on('logout', id => {
-        //     const index = players.findIndex(p => p.id === id)
-        //     players.splice(index, 1)
-        //     // delete players[index]
-        // })
-
-        // window.onload = () => {
-        //     const x = Math.floor(Math.random() * (width - 30)) + 30
-        //     const y = Math.floor(Math.random() * (height - 30)) + 30
-        //     console.log(x, y)
-        //     user = new component(30, 30, size, "assets/smiley.gif", x, y, "image", 'user', name)
-        //     myGameArea.start()
-        //     socket.emit('login', { x, y, name })
-        // }
-
-        // var myGameArea = {
-        //     canvas: document.getElementById("canvas"),
-        //     input: document.createElement('input'),
-        //     name: document.createElement('input'),
-        //     playerName: document.createElement('input'),
-        //     chat: document.createElement('textarea'),
-        //     textBox: document.createElement('textarea'),
-        //     // userImg: new Image(),
-
-        //     start: function () {
-
-        //         this.canvas.width = width
-        //         this.canvas.height = height
-        //         this.context = this.canvas.getContext("2d")
-
-        //         this.input.id = 'input'
-        //         this.input.autofocus = true
-        //         this.input.hidden = true
-        //         this.input.max = 100
-
-        //         this.chat.id = 'chat'
-        //         this.chat.disabled = true
-        //         this.chat.focus = true
-        //         this.chat.hidden = true
-        //         this.chat.style = 'resize:none'
-        //         // this.chat.cols = 73
-        //         // this.chat.rows = 7
-
-        //         this.textBox.id = 'textbox'
-        //         this.textBox.disabled = true
-        //         this.textBox.focus = true
-        //         this.textBox.hidden = true
-
-        //         // this.name.name = 'name'
-        //         // this.playerName.name = 'playername'
-
-        //         // this.userImg.id = 'userImg'
-        //         // this.userImg.src = 'assets/body_male.png'
-
-        //         // document.body.insertBefore(this.canvas, document.body.childNodes[0])
-        //         document.body.insertBefore(this.chat, document.body.childNodes[1])
-        //         document.body.insertBefore(this.input, document.body.childNodes[2])
-        //         // document.body.insertBefore(this.userImg, document.body.childNodes[3])
-        //         // document.body.insertBefore(this.name, document.body.childNodes[4])
-        //         // document.body.insertBefore(this.playerName, document.body.childNodes[4])
-        //         document.body.insertBefore(this.textBox, document.body.childNodes[5])
-
-        //         this.interval = setInterval(updateGameArea, 1000 / fps)
-
-        //         window.addEventListener('keydown', function (e) {
-        //             myGameArea.keys = (myGameArea.keys || [])
-        //             myGameArea.keys[e.keyCode] = (e.type == "keydown")
-
-        //             // enter
-        //             if (myGameArea.keys && myGameArea.keys[13]) {
-        //                 if (myGameArea.input.hidden && !myGameArea.input.value) {
-        //                     myGameArea.input.hidden = false
-        //                     myGameArea.chat.hidden = false
-        //                     this.input.select()
-        //                 } else if (!myGameArea.input.hidden && myGameArea.input.value) {
-        //                     myGameArea.input.hidden = false
-        //                     myGameArea.chat.hidden = false
-        //                     myGameArea.textBox.hidden = false
-        //                     message = myGameArea.input.value
-        //                     socket.emit('chat', { type: 'world', name: user.name, message: myGameArea.input.value })
-        //                     myGameArea.input.value = ''
-
-        //                     clearTimeout(userChatTimeout)
-        //                     userChatTimeout = setTimeout(() => myGameArea.textBox.hidden = true, 5000)
-
-        //                 } else {
-        //                     myGameArea.input.hidden = true
-        //                     myGameArea.chat.hidden = true
-        //                 }
-        //             }
-        //         })
-        //         window.addEventListener('keyup', function (e) {
-        //             myGameArea.keys[e.keyCode] = (e.type == "keydown")
-        //         })
-        //     },
-        //     clear: function () {
-        //         this.context.clearRect(0, 0, this.canvas.width, this.canvas.height)
-        //     },
-        //     stop: function () {
-        //         clearInterval(this.interval)
-        //     }
-
-        // }
-
-        // function component(width, height, size, color, x, y, type, id, name) {
-        //     this.id = id
-        //     this.name = name
-        //     this.type = type
-        //     this.size = size
-        //     if (type == "image") {
-        //         this.image = new Image()
-        //         this.image.src = color
-        //     }
-        //     this.width = width
-        //     this.height = height
-        //     this.speedX = 0
-        //     this.speedY = 0
-        //     this.x = x
-        //     this.y = y
-        //     this.update = function () {
-        //         ctx = myGameArea.context
-        //         if (type == "image") {
-        //             ctx.drawImage(this.image,
-        //                 this.x,
-        //                 this.y,
-        //                 this.width, this.height)
-        //         } else {
-        //             ctx.fillStyle = color
-        //             ctx.fillRect(this.x, this.y, this.width, this.height)
-        //         }
-        //         drawName(this.name, this.x, this.y)
-        //         drawTextBox(message, this.x, this.y)
-        //     }
-        //     this.newPos = function () {
-        //         this.x += this.speedX
-        //         this.y += this.speedY
-        //     }
-
-        // }
-
-        // function updateGameArea() {
-        //     myGameArea.clear()
-
-        //     user.image.src = "assets/smiley.gif"
-
-        //     user.speedX = 0
-        //     user.speedY = 0
-
-        //     if (user.x > 0 && myGameArea.keys && myGameArea.keys[37]) {
-        //         // user.image.src = "assets/angry.gif"
-        //         user.speedX = -speed
-        //     }
-
-        //     if (user.x < width - size && myGameArea.keys && myGameArea.keys[39]) {
-        //         user.speedX = speed
-        //     }
-
-        //     if (user.y > 10 && myGameArea.keys && myGameArea.keys[38]) {
-        //         user.speedY = -speed
-        //     }
-
-        //     if (user.y < height - (size + 25) && myGameArea.keys && myGameArea.keys[40]) {
-        //         user.speedY = speed
-        //     }
-
-        //     if (user.speedX || user.speedY) socket.emit('move', { x: user.x, y: user.y })
-
-        //     user.newPos()
-        //     user.update()
-
-        //     players.forEach(p => {
-        //         p.newPos()
-        //         p.update()
-        //     })
-
-        // }
-
-        // function drawName(name, posX, posY) {
-        //     myGameArea.name.value = name
-        //     myGameArea.name.disabled = true
-        //     myGameArea.name.style = `
-        //         position:absolute;
-        //         left: ${posX - 52}px;
-        //         top: ${posY + 30}px;
-        //         width:134px;
-        //         text-align: center;
-        //         background: transparent;
-        //         border: none;
-        //         font:16px Comic Sans MS`
-        // }
-
-        // function drawPlayerName2(name, posX, posY) {
-        //     myGameArea.playerName.value = name
-        //     myGameArea.playerName.disabled = true
-        //     myGameArea.playerName.style = `
-        //         position:absolute;
-        //         left: ${posX - 52}px;
-        //         top: ${posY + 30}px;
-        //         width:134px;
-        //         text-align: center;
-        //         background: transparent;
-        //         border: none;
-        //         font:16px Comic Sans MS`
-        // }
-
-        // function drawTextBox(message, posX, posY) {
-        //     // myGameArea.context.fillStyle = "black"
-        //     // myGameArea.context.font = "20px"
-        //     // myGameArea.context.textAlign = 'center'
-        //     // myGameArea.context.fillText(message, posX - 40, posY - 65)
-
-        //     myGameArea.textBox.value = message
-        //     myGameArea.textBox.cols = 1
-        //     // myGameArea.textBox.disabled = true
-        //     if (posX < 85) {
-        //         posX = posX
-        //     } else if (posX > width - 115) {
-        //         posX = posX - 175
-        //     } else {
-        //         posX = posX - 85
-        //     }
-
-        //     if (posY < 40) {
-        //         posY = window.height + (height - (posY + 50))
-        //     } else if (posY > height - 50) {
-        //         posY = window.height + (height - (posY + 10))
-        //     } else {
-        //         posY = window.height + (height - (posY - 45))
-        //     }
-
-        //     myGameArea.textBox.style = `
-        //     color: white;
-        //     opacity: 0.6;
-        //     background-color: black;
-        //     position: absolute;
-        //     left: ${posX}px;
-        //     bottom: ${posY}px;
-        //     width: 13.9%;
-        //     min-height: 1.2;
-        //     max-height: 100%;
-        //     resize: none;
-        //     font-size: 14px;`
-        // }
-
-        // function drawName(txt, posX, posY) {
-        //     myGameArea.context.fillStyle = "black"
-        //     myGameArea.context.font = "20px"
-        //     myGameArea.context.textAlign = 'center'
-        //     myGameArea.context.fillText(txt, posX + 15, posY + 45)
-        //     // myGameArea.context.strokeRect(posX - 60, posY - 80, 150, 70)
-        //     // myGameArea.context.style = `left: ${posX-52}px;top: ${posY}px;width:134px`
-
-        //     // myGameArea.name.value = txt
-        //     // myGameArea.name.style = `position:absolute;
-        //     // left: ${posX - 52}px;
-        //     // top: ${posY}px;
-        //     // width:134px;
-        //     // text-align: center;`
-        // }
     </script>
 
 </body>
