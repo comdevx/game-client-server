@@ -3,8 +3,6 @@ function component(width, height, x, y, id, name, chatId) {
     this.id = id
     this.chatId = chatId
     this.name = name
-    this.image = new Image()
-    this.image.src = 'https://opengameart.org/sites/default/files/Green-Cap-Character-16x18.png'
     this.width = width
     this.height = height
     this.x = x
@@ -14,6 +12,48 @@ function component(width, height, x, y, id, name, chatId) {
     this.loop = [0, 1, 0, 2]
     this.message = ''
     this.chatTimeout = 0
+
+    this.image = new Image()
+    this.image.src = 'https://opengameart.org/sites/default/files/Green-Cap-Character-16x18.png'
+
+    this.button = document.createElement('button')
+    this.button.addEventListener('click', (event) => {
+
+        if (user.name !== this.name) {
+
+            if (menu) {
+                menu = null
+                document.getElementById('menu').remove()
+            }
+
+            menu = document.createElement("button")
+            menu.id = 'menu'
+            menu.innerHTML = `Chat with ${this.name}`
+
+            if (this.x > canvas.width - 119) {
+                posX = (window.innerWidth / 2) + 290 - this.width
+            } else {
+                posX = (window.innerWidth / 2) - 390 + this.x + this.width
+            }
+
+            menu.style = `
+            color: white;
+            opacity: 0.6;
+            border: 0;
+            background-color: black;
+            position: absolute;
+            left: ${posX}px;
+            top: ${this.y}px;
+            min-height: 1.2;
+            max-height: 100%;
+            resize: none;
+            font-size: 14px;
+            `
+            document.getElementById('div').appendChild(menu)
+
+        }
+    })
+    document.body.insertBefore(this.button, document.body.childNodes[0])
 
     this.textBox = document.createElement('textarea')
     this.textBox.id = chatId
@@ -38,6 +78,8 @@ function component(width, height, x, y, id, name, chatId) {
         )
 
         // this.currentLoopIndex = 0
+
+        drawMenu(this)
 
     }
 

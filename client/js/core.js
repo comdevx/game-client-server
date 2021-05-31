@@ -35,6 +35,11 @@ window.onload = () => {
             }
         }
 
+        if (menu) {
+            menu = null
+            document.getElementById('menu').remove()
+        }
+
     })
 
     window.addEventListener('keyup', (event) => {

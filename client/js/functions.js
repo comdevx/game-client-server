@@ -37,3 +37,19 @@ function moveCharacter(deltaX, deltaY, direction) {
     }
     user.currentDirection = direction
 }
+
+function drawMenu(element) {
+
+    posX = (window.innerWidth / 2) - 400 + element.x
+
+    posY = element.y
+
+    element.button.style = `
+        position: absolute;
+        width: ${element.width}px;
+        height: ${element.height}px;
+        left: ${posX}px;
+        top: ${posY}px;
+        opacity: 0;
+    `
+}

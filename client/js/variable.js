@@ -1,4 +1,3 @@
-let user
 const players = []
 const messageList = []
 const scale = 2
@@ -14,10 +13,13 @@ const facingRight = 3
 const frameLimit = 12
 const momentSpeed = 1
 
-const socketUrl = 'https://a47e1f984f3d.ngrok.io'
+
+const socketUrl = 'localhost:3000'
+// const socketUrl = 'https://a47e1f984f3d.ngrok.io'
 const socket = io(socketUrl)
 let socketDown = false
-
+let user
+let menu
 let frameCount = 0
 let canvas = document.getElementById('canvas')
 let ctx = canvas.getContext('2d')
