@@ -45,3 +45,11 @@ socket.on('logout', id => {
     }
 
 })
+
+socket.on('connect_error', () => {
+    if (!socketDown) {
+        alert('Failed connect server!!!')
+        console.log('Failed connect to server')
+        socketDown = true
+    }
+})

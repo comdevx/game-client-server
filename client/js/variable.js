@@ -16,6 +16,7 @@ const momentSpeed = 1
 
 const socketUrl = 'https://a47e1f984f3d.ngrok.io'
 const socket = io(socketUrl)
+let socketDown = false
 
 let frameCount = 0
 let canvas = document.getElementById('canvas')
