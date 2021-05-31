@@ -13,18 +13,22 @@ const config = {
 
 start()
 
-async function start() {
+function start() {
 
     console.log('copy folder')
 
-    glob('js/**/*.js', null, function (er, files) {
+    fs.rmdirSync('js', { recursive: true })
+
+    fs.mkdirSync('js')
+
+    glob('../client/js/**/*.js', null, function (er, files) {
         files.forEach(f => {
 
             console.log(f)
 
             const encryptData = obfuscate(fs.readFileSync(`./${f}`, 'utf8'), config).getObfuscatedCode()
 
-            fs.writeFileSync(`./${f}`, encryptData)
+            fs.writeFileSync(`./js/${f.split('/').pop()}`, encryptData)
 
         })
 

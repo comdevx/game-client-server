@@ -14,7 +14,7 @@ const facingRight = 3
 const frameLimit = 12
 const momentSpeed = 1
 
-const socketUrl = 'localhost:3000'
+const socketUrl = 'https://a47e1f984f3d.ngrok.io'
 const socket = io(socketUrl)
 
 let frameCount = 0
