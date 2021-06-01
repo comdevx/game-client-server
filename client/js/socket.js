@@ -18,11 +18,32 @@ socket.on('playermove', data => {
 })
 
 socket.on('chat-world', data => {
-    if (messageList.length > 99) {
-        messageList.splice(0, 1)
+    if (publicMessageList.length > 99) {
+        publicMessageList.splice(0, 1)
     }
-    messageList.push(` ${data.name}: ${data.message}\n`)
-    chat.value = messageList.join('')
+    publicMessageList.push(` ${data.name}: ${data.message}\n`)
+    chat.value = publicMessageList.join('')
+    chat.scrollTop = chat.scrollHeight
+
+    const index = players.findIndex(p => p.name === data.name)
+    if (players[index]) {
+        players[index].message = data.message
+
+        clearTimeout(players[index].chatTimeout)
+        players[index].chatTimeout = setTimeout(() => {
+            players[index].message = ''
+            document.getElementById(players[index].chatId).hidden = true
+        }, 5000)
+    }
+})
+
+socket.on('chat-private', data => {
+    if (privateMessageList.length > 99) {
+        privateMessageList.splice(0, 1)
+    }
+    privateMessageList.push(` ${data.name}: ${data.message}\n`)
+    publicMessageList.push(` ${data.name}: ${data.message}\n`)
+    chat.value = privateMessageList.join('')
     chat.scrollTop = chat.scrollHeight
 
     const index = players.findIndex(p => p.name === data.name)

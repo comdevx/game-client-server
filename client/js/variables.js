@@ -1,5 +1,7 @@
 const players = []
-const messageList = []
+const publicMessageList = []
+const privateMessageList = []
+const partyMessageList = []
 const scale = 2
 const width = 16.1
 const height = 18.1
@@ -13,9 +15,8 @@ const facingRight = 3
 const frameLimit = 12
 const momentSpeed = 1
 
-
 const socketUrl = 'localhost:3000'
-// const socketUrl = 'https://a47e1f984f3d.ngrok.io'
+// const socketUrl = 'https://43114e38ec37.ngrok.io'
 const socket = io(socketUrl)
 let socketDown = false
 let user
@@ -26,3 +27,4 @@ let ctx = canvas.getContext('2d')
 let keyPresses = {}
 let message = ''
 let userChatTimeout
+let chatType = 'public'

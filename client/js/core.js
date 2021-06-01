@@ -11,9 +11,7 @@ window.onload = () => {
         // enter
         if (canvas.keys && canvas.keys[13]) {
             if (input.hidden && !input.value) {
-                input.hidden = false
-                chat.hidden = false
-                input.select()
+                getChatBar()
             } else if (!input.hidden && input.value) {
                 input.hidden = false
                 chat.hidden = false
@@ -30,8 +28,7 @@ window.onload = () => {
                 }, 5000)
 
             } else {
-                input.hidden = true
-                chat.hidden = true
+                hideChatBar()
             }
         }
 

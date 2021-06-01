@@ -35,7 +35,7 @@ io.on('connection', (socket) => {
     socket.on('move', data => {
         index = playerList.findIndex(p => p.id === socket.id)
         if (playerList[index]) {
-            console.log(index, playerList[index].x, playerList[index].y, data.x, data.y)
+            // console.log(index, playerList[index].x, playerList[index].y, data.x, data.y)
             // data = { ...data, id: socket.id }
             // playerList[index] = data
             Object.assign(playerList[index], data)
